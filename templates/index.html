@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SR Connect</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #000; color: #fff; margin: 0; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
+        #login-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; width: 100%; position: fixed; top: 0; left: 0; background: #000; z-index: 999; }
+        .box { width: 90%; max-width: 360px; background: #111; padding: 30px; border-radius: 25px; border: 2px solid red; text-align: center; }
+        .box input { width: 100%; padding: 12px; border-radius: 10px; margin-bottom: 20px; font-weight: bold; }
+        .box button { width: 100%; padding: 15px; border-radius: 30px; background: red; color: white; border: none; font-weight: bold; }
+        #chat-screen { display: none; height: 100%; width: 100%; flex-direction: column; position: relative; }
+        .header { background: #111; padding: 15px; text-align: center; border-bottom: 2px solid red; flex-shrink: 0; font-weight: bold; font-size: 18px; }
+        #chat-box { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; background: #000; }
+        .bubble { padding: 10px 15px; border-radius: 18px; max-width: 85%; word-wrap: break-word; font-size: 15px; line-height: 1.5; white-space: pre-wrap; }
+        .bubble a { color: #00a2ff; text-decoration: underline; font-weight: bold; }
+        .user { align-self: flex-end; background: red; color: white; }
+        .admin { align-self: flex-start; background: #222; border: 1px solid #333; }
+        .img-msg { max-width: 200px; border-radius: 10px; display: block; margin: 5px 0; }
+        .input-bar { background: #111; padding: 10px 12px; display: flex; gap: 8px; border-top: 1px solid #333; align-items: center; flex-shrink: 0; position: sticky; bottom: 0; width: 100%; z-index: 100; }
+        #msgInp { flex: 1; padding: 12px; border-radius: 20px; border: 1px solid #444; background: #000; color: #fff; outline: none; }
+        .plus-btn { background: #333; color: white; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 20px; }
+        .send-btn { background: red; color: white; border: none; padding: 10px 18px; border-radius: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div id="login-screen">
+        <div class="box">
+            <h3 style="color:red">ADMIN SE CONNECT HONE KE LIYE APNA NAME LIKHE 🔥</h3>
+            <input type="text" id="nameInput" placeholder="Enter Your Name...">
+            <button onclick="startChat()">START CHAT</button>
+        </div>
+    </div>
+    <div id="chat-screen">
+        <div class="header">CHATTING AS: <span style="color:red">ADMIN</span> 🔥</div>
+        <div id="chat-box"></div>
+        <div class="input-bar">
+            <input type="file" id="fileInp" hidden accept="image/*" onchange="sendFile()">
+            <button class="plus-btn" onclick="document.getElementById('fileInp').click()">+</button>
+            <input type="text" id="msgInp" placeholder="Type here...">
+            <button class="send-btn" onclick="sendText()">SEND</button>
+        </div>
+    </div>
+    <script>
+        let myName = localStorage.getItem('sr_chat_name');
+        let lastMsgCount = 0;
+        if(myName) showChat();
+        function linkify(text) {
+            var urlPattern = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+            return text.replace(urlPattern, '<a href="$1" target="_blank">$1</a>');
+        }
+        function startChat() {
+            let n = document.getElementById('nameInput').value.trim();
+            if(!n) return alert("Naam dalo!");
+            localStorage.setItem('sr_chat_name', n);
+            myName = n; showChat();
+        }
+        function showChat() {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('chat-screen').style.display = 'flex';
+            setInterval(loadMsgs, 2000); loadMsgs();
+        }
+        function loadMsgs() {
+            fetch('/get_messages').then(r => r.json()).then(db => {
+                if(!db[myName]) return;
+                let messages = db[myName].messages;
+                if(messages.length !== lastMsgCount) {
+                    let html = messages.map(m => {
+                        let content = m.type === 'image' ? `<img src="${m.text}" class="img-msg" onclick="window.open('${m.text}')">` : linkify(m.text);
+                        return `<div class="bubble ${m.role}">${content}</div>`;
+                    }).join('');
+                    const box = document.getElementById('chat-box');
+                    box.innerHTML = html; box.scrollTop = box.scrollHeight;
+                    lastMsgCount = messages.length;
+                }
+            });
+        }
+        function sendText() {
+            let t = document.getElementById('msgInp').value.trim();
+            if(!t) return;
+            let fd = new FormData(); fd.append('sender', myName); fd.append('text', t);
+            fetch('/send', { method:'POST', body:fd }).then(() => { document.getElementById('msgInp').value = ''; loadMsgs(); });
+        }
+        function sendFile() {
+            let f = document.getElementById('fileInp').files[0];
+            if(!f) return;
+            let fd = new FormData(); fd.append('sender', myName); fd.append('image', f);
+            fetch('/send', { method:'POST', body:fd }).then(() => loadMsgs());
+        }
+    </script>
+</body>
+</html>
