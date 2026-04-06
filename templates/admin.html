@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SR Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * { box-sizing: border-box; }
+        body { background: #000; color: #fff; font-family: sans-serif; margin: 0; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+        #inbox { flex: 1; display: flex; flex-direction: column; }
+        .header { background: #111; padding: 15px; border-bottom: 2px solid red; display: flex; justify-content: space-between; align-items: center; }
+        .user-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .user-item { background: #111; margin-bottom: 10px; padding: 15px; border-radius: 15px; border: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+        .user-item.pinned { border: 2px solid red; background: #1a0000; }
+        .red-ball { width: 10px; height: 10px; background: red; border-radius: 50%; box-shadow: 0 0 8px red; }
+        #admin-chat { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; flex-direction: column; z-index: 100; }
+        #msgBox { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .bubble { padding: 10px 15px; border-radius: 15px; max-width: 80%; white-space: pre-wrap; }
+        .bubble a { color: #00a2ff; text-decoration: underline; font-weight: bold; }
+        .admin { align-self: flex-end; background: red; }
+        .user { align-self: flex-start; background: #222; border: 1px solid #444; }
+        .img-msg { max-width: 180px; border-radius: 10px; }
+        .admin-input-bar { background: #111; padding: 12px; display: flex; gap: 8px; border-top: 1px solid #333; align-items: center; position: sticky; bottom: 0; width: 100%; }
+        #admInp { flex: 1; padding: 10px; border-radius: 20px; background: #000; color: #fff; border: 1px solid #444; }
+        .adm-btn { background: red; color: white; border: none; padding: 10px 15px; border-radius: 15px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div id="inbox">
+        <div class="header"><span style="color:red; font-weight:bold">SR ADMIN PANEL</span></div>
+        <div class="user-list" id="userList"></div>
+    </div>
+    <div id="admin-chat">
+        <div class="header">
+            <button onclick="closeChat()" style="background:none; border:1px solid red; color:red; padding:5px 12px; border-radius:8px;">BACK</button>
+            <span id="chatWith" style="color:red; font-weight:bold; text-transform:uppercase;"></span>
+            <div></div>
+        </div>
+        <div id="msgBox"></div>
+        <div class="admin-input-bar">
+            <input type="file" id="admFile" hidden accept="image/*" onchange="adminSendFile()">
+            <button onclick="document.getElementById('admFile').click()" style="background:#333; color:white; border:none; width:35px; height:35px; border-radius:50%">+</button>
+            <input type="text" id="admInp" placeholder="Type a reply...">
+            <button class="adm-btn" onclick="adminSendText()">SEND</button>
+        </div>
+    </div>
+    <script>
+        let selectedUser = "";
+        let pinnedUsers = JSON.parse(localStorage.getItem('sr_pinned') || "[]");
+        function linkify(text) {
+            var urlPattern = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+            return text.replace(urlPattern, '<a href="$1" target="_blank">$1</a>');
+        }
+        function refreshInbox() {
+            fetch('/get_messages').then(r => r.json()).then(db => {
+                let sortedUsers = Object.keys(db).sort((a, b) => {
+                    let aP = pinnedUsers.includes(a); let bP = pinnedUsers.includes(b);
+                    if(aP && !bP) return -1; if(!aP && bP) return 1;
+                    return db[b].unread - db[a].unread;
+                });
+                if(!selectedUser) {
+                    document.getElementById('userList').innerHTML = sortedUsers.map(u => `
+                        <div class="user-item ${pinnedUsers.includes(u)?'pinned':''}" onclick="openChat('${u}')" oncontextmenu="event.preventDefault(); togglePin('${u}')">
+                            <span style="font-weight:bold; text-transform:uppercase;">👤 ${u}</span> ${db[u].unread ? '<div class="red-ball"></div>' : ''}
+                        </div>`).join('');
+                } else { renderMsgs(db[selectedUser].messages); }
+            });
+        }
+        function togglePin(u) {
+            pinnedUsers = pinnedUsers.includes(u) ? pinnedUsers.filter(x => x !== u) : [...pinnedUsers, u];
+            localStorage.setItem('sr_pinned', JSON.stringify(pinnedUsers)); refreshInbox();
+        }
+        function openChat(u) {
+            selectedUser = u; document.getElementById('chatWith').innerText = u;
+            document.getElementById('admin-chat').style.display = 'flex';
+            fetch('/mark_seen', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user:u}) });
+            refreshInbox();
+        }
+        function closeChat() { selectedUser = ""; document.getElementById('admin-chat').style.display = 'none'; }
+        function renderMsgs(msgs) {
+            const box = document.getElementById('msgBox');
+            box.innerHTML = msgs.map(m => {
+                let content = m.type === 'image' ? `<img src="${m.text}" class="img-msg" onclick="window.open('${m.text}')">` : linkify(m.text);
+                return `<div class="bubble ${m.role}">${content}</div>`;
+            }).join('');
+            box.scrollTop = box.scrollHeight;
+        }
+        function adminSendText() {
+            let t = document.getElementById('admInp').value;
+            let fd = new FormData(); fd.append('sender', selectedUser); fd.append('text', t); fd.append('role', 'admin');
+            fetch('/send', {method:'POST', body:fd}).then(() => { document.getElementById('admInp').value = ''; refreshInbox(); });
+        }
+        function adminSendFile() {
+            let f = document.getElementById('admFile').files[0];
+            let fd = new FormData(); fd.append('sender', selectedUser); fd.append('image', f); fd.append('role', 'admin');
+            fetch('/send', {method:'POST', body:fd}).then(() => refreshInbox());
+        }
+        setInterval(refreshInbox, 3000); refreshInbox();
+    </script>
+</body>
+</html>
