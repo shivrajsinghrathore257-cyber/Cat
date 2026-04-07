@@ -9,25 +9,27 @@ if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
 # 🔥 AUTO REPLY WITH BETTER SPACING
-AUTO_REPLY = """🚀 *COLOUR TRADING PROFIT MISSION* 💸
+AUTO_REPLY = """🚀 COLOUR TRADING PROFIT MISSION 💸
 
 Sabka profit karane ke liye humne ek special channel banaya hai! 
 
-📊 *KAISA KAAM KAREGA?*
+📊 KAISA KAAM KAREGA?
 
-1️⃣ Channel mein sirf 50 experts honge.
+1️⃣ Channel mein sirf 50-100 user's honge.
 2️⃣ Har period ka ek POLL aayega.
-3️⃣ Do options: MOTA (Big) aur PATLA (Small).
+3️⃣ Do options: Big aur Small.
 4️⃣ Jis option pe sabse zyada VOTES honge, wahi trade leni hai! 📈
 
-⚠️ *LEVELS:* Isme hamesha 5 Level tak Fund Manage rakhna hai.
+⚠️ LEVELS: Isme hamesha 4-5 Level tak Fund Manage rakhna hai.
 
-🎁 *FREE TRIAL:* ek session aapka FREE TRIAL hoga. Register karke screenshot bheje:
+🎁 FREE TRIAL: ek session aapka FREE TRIAL hoga. free trial use karne ke liye Register karke screenshot bheje:
 https://www.in999pp.com/#/register?invitationCode=32775781092
+note: free trial me bina diposit kiye aap aa skte hai.
 
-✅ *JOINING PROCESS:* ₹500 deposit karein aur screenshot yahan bhejein.
+✅ JOINING PROCESS: ₹500 deposit karein aur screenshot yahan bhejenge to aapko 7 din tak aapko is channel me rakhenge.
 
-💎 *WEEKLY ACCESS:* ₹300 pay karke weekly access lein.
+💎 *WEEKLY ACCESS:* 7 din pure hone ke baad ₹300 pay karke weekly access lein.
+support: yha message kre sab ka solution milgea.
 
 🙏 THANKS FOR READING!"""
 
